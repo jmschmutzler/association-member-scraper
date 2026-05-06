@@ -74,3 +74,10 @@ def test_extract_companies_null_fields_become_none():
         mock_cls.return_value = _make_mock_client(data)
         result = extract_companies("<html></html>", api_key="test")
     assert result[0].website is None
+
+
+def test_extract_companies_returns_empty_list_on_non_list_json():
+    with patch("extractor.anthropic.Anthropic") as mock_cls:
+        mock_cls.return_value = _make_mock_client('{"companies": []}')
+        result = extract_companies("<html></html>", api_key="test")
+    assert result == []

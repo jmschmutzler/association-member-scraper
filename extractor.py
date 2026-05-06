@@ -45,7 +45,7 @@ def extract_companies(html: str, api_key: str) -> list[Company]:
     message = client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=8096,
-        messages=[{"role": "user", "content": EXTRACTION_PROMPT.format(html=truncated)}],
+        messages=[{"role": "user", "content": EXTRACTION_PROMPT.replace("{html}", truncated)}],
     )
 
     raw = message.content[0].text.strip()
@@ -58,6 +58,9 @@ def extract_companies(html: str, api_key: str) -> list[Company]:
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
+        return []
+
+    if not isinstance(data, list):
         return []
 
     return [
