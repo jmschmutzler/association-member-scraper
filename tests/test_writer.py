@@ -59,8 +59,7 @@ def test_write_csv_includes_header():
     rows = [company_to_row(_make_company(), "https://dir.com")]
     csv_str = write_csv(rows)
     first_line = csv_str.splitlines()[0]
-    assert "name" in first_line
-    assert "website" in first_line
+    assert first_line == ",".join(FIELDS)
 
 
 def test_write_csv_includes_company_data():
@@ -70,11 +69,16 @@ def test_write_csv_includes_company_data():
     assert "https://acme.com" in csv_str
 
 
-def test_write_xlsx_returns_bytes():
-    rows = [company_to_row(_make_company(), "https://dir.com")]
+def test_write_xlsx_has_companies_sheet_with_data():
+    rows = [company_to_row(_make_company("Acme Corp", "https://acme.com"), "https://dir.com")]
     result = write_xlsx(rows, [])
     assert isinstance(result, bytes)
-    assert len(result) > 0
+    wb = load_workbook(io.BytesIO(result))
+    assert "Companies" in wb.sheetnames
+    ws = wb["Companies"]
+    header = [cell.value for cell in ws[1]]
+    assert header == FIELDS
+    assert ws.cell(row=2, column=1).value == "Acme Corp"
 
 
 def test_write_xlsx_has_errors_sheet():
