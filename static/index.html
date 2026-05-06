@@ -85,6 +85,10 @@
         body: JSON.stringify({ urls }),
       });
       data = await resp.json();
+      if (!resp.ok) {
+        document.getElementById('error-msg').textContent = data.detail || data.error || 'Server error.';
+        return;
+      }
     } catch (e) {
       document.getElementById('error-msg').textContent = 'Failed to connect to server.';
       return;
@@ -118,6 +122,8 @@
     } catch (e) {
       return;
     }
+
+    if (!data.url_results) return;
 
     jobUrls.forEach((url, i) => {
       const r = data.url_results[url];
