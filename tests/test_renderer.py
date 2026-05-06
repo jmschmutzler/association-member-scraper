@@ -21,7 +21,8 @@ async def test_render_retries_once_on_failure():
             raise TimeoutError("first attempt timed out")
         return ["<html>success</html>"]
 
-    with patch("renderer._render_with_browser", side_effect=flaky):
+    with patch("renderer._render_with_browser", side_effect=flaky), \
+         patch("renderer.asyncio.sleep", new=AsyncMock()):
         result = await render_all_pages("https://example.com/members")
 
     assert result == ["<html>success</html>"]

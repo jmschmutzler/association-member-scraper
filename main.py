@@ -22,6 +22,7 @@ app = FastAPI()
 
 # Per-job accumulated data: rows and errors
 _job_data: dict[str, dict] = {}
+_tasks: dict[str, asyncio.Task] = {}
 
 
 class CreateJobRequest(BaseModel):
@@ -32,7 +33,7 @@ class CreateJobRequest(BaseModel):
 async def post_jobs(req: CreateJobRequest):
     job = create_job(req.urls)
     _job_data[job.id] = {"rows": [], "errors": []}
-    asyncio.create_task(_run_job(job))
+    _tasks[job.id] = asyncio.create_task(_run_job(job))
     return {"id": job.id}
 
 
@@ -102,7 +103,7 @@ async def _run_job(job: Job) -> None:
             pages_html = await render_all_pages(directory_url)
 
             for html in pages_html:
-                companies = extract_companies(html, API_KEY)
+                companies = await asyncio.to_thread(extract_companies, html, API_KEY)
                 new_rows = [company_to_row(c, directory_url) for c in companies]
                 _job_data[job.id]["rows"].extend(new_rows)
                 result.companies_found += len(new_rows)

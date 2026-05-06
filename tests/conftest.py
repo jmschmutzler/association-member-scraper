@@ -10,6 +10,8 @@ def clear_jobs():
     import main as main_module
     jobs_module._jobs.clear()
     main_module._job_data.clear()
+    main_module._tasks.clear()
     yield
     jobs_module._jobs.clear()
     main_module._job_data.clear()
+    main_module._tasks.clear()
