@@ -6,13 +6,13 @@ from urllib.parse import urljoin, urlparse
 DIRECTORY_PATTERNS = [
     r"/members?(/|$)",
     r"/directory(/|$)",
-    r"/find-a-member",
-    r"/our-members?",
-    r"/member-directory",
-    r"/membership-directory",
-    r"/search-members?",
-    r"/member-search",
-    r"/member-list",
+    r"/find-a-member(/|$)",
+    r"/our-members?(/|$)",
+    r"/member-directory(/|$)",
+    r"/membership-directory(/|$)",
+    r"/search-members?(/|$)",
+    r"/member-search(/|$)",
+    r"/member-list(/|$)",
 ]
 
 
@@ -38,8 +38,9 @@ async def discover_directory_url(url: str) -> str:
     except Exception:
         return url
 
-    base_netloc = urlparse(url).netloc
-    base = f"{urlparse(url).scheme}://{base_netloc}"
+    parsed = urlparse(url)
+    base_netloc = parsed.netloc
+    base = f"{parsed.scheme}://{base_netloc}"
     soup = BeautifulSoup(response.text, "html.parser")
 
     for a in soup.find_all("a", href=True):

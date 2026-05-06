@@ -23,6 +23,35 @@ def test_looks_like_directory_about_page_is_false():
     assert _looks_like_directory("https://example.com/about") is False
 
 
+def test_looks_like_directory_our_members():
+    assert _looks_like_directory("https://example.com/our-members") is True
+
+
+def test_looks_like_directory_member_directory():
+    assert _looks_like_directory("https://example.com/member-directory") is True
+
+
+def test_looks_like_directory_membership_directory():
+    assert _looks_like_directory("https://example.com/membership-directory") is True
+
+
+def test_looks_like_directory_search_members():
+    assert _looks_like_directory("https://example.com/search-members") is True
+
+
+def test_looks_like_directory_member_search():
+    assert _looks_like_directory("https://example.com/member-search") is True
+
+
+def test_looks_like_directory_member_list():
+    assert _looks_like_directory("https://example.com/member-list") is True
+
+
+def test_looks_like_directory_no_false_positive_on_suffix():
+    assert _looks_like_directory("https://example.com/our-members-only") is False
+    assert _looks_like_directory("https://example.com/member-directory-old") is False
+
+
 @pytest.mark.asyncio
 async def test_discover_returns_original_if_already_directory():
     url = "https://example.com/members"
