@@ -30,18 +30,19 @@ async def _render_with_browser(url: str, max_pages: int) -> list[str]:
     pages_html: list[str] = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.goto(url, timeout=PAGE_TIMEOUT, wait_until="networkidle")
+        try:
+            page = await browser.new_page()
+            await page.goto(url, timeout=PAGE_TIMEOUT, wait_until="networkidle")
 
-        for _ in range(max_pages):
-            pages_html.append(await page.content())
-            next_btn = await _find_next_button(page)
-            if not next_btn:
-                break
-            await next_btn.click()
-            await page.wait_for_load_state("networkidle", timeout=PAGE_TIMEOUT)
-
-        await browser.close()
+            for _ in range(max_pages):
+                pages_html.append(await page.content())
+                next_btn = await _find_next_button(page)
+                if not next_btn:
+                    break
+                await next_btn.click()
+                await page.wait_for_load_state("networkidle", timeout=PAGE_TIMEOUT)
+        finally:
+            await browser.close()
     return pages_html
 
 
@@ -58,4 +59,4 @@ async def render_all_pages(url: str, max_pages: int = 20) -> list[str]:
             if attempt == 1:
                 raise
             await asyncio.sleep(2)
-    return []
+    raise AssertionError("unreachable: loop always returns or raises")
