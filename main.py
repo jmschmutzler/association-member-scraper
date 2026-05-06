@@ -60,7 +60,7 @@ async def get_job_status(job_id: str):
 @app.get("/jobs/{job_id}/csv")
 async def download_csv(job_id: str):
     job = get_job(job_id)
-    if not job:
+    if not job or job_id not in _job_data:
         raise HTTPException(status_code=404, detail="Job not found")
     rows: list[CompanyRow] = deduplicate(_job_data[job_id]["rows"])
     content = write_csv(rows)
@@ -74,7 +74,7 @@ async def download_csv(job_id: str):
 @app.get("/jobs/{job_id}/xlsx")
 async def download_xlsx(job_id: str):
     job = get_job(job_id)
-    if not job:
+    if not job or job_id not in _job_data:
         raise HTTPException(status_code=404, detail="Job not found")
     rows: list[CompanyRow] = deduplicate(_job_data[job_id]["rows"])
     errors: list[dict] = _job_data[job_id]["errors"]
