@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Association Member Scraper</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 20px; color: #222; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; }
+    textarea { width: 100%; box-sizing: border-box; padding: 10px; font-size: 0.9rem;
+               border: 1px solid #ccc; border-radius: 6px; resize: vertical; }
+    button { margin-top: 12px; padding: 10px 22px; font-size: 0.95rem; cursor: pointer;
+             background: #2563eb; color: white; border: none; border-radius: 6px; }
+    button:hover { background: #1d4ed8; }
+    button.secondary { background: #6b7280; margin-left: 8px; }
+    button.secondary:hover { background: #4b5563; }
+    .url-row { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: baseline; }
+    .status { font-size: 1.1rem; width: 20px; text-align: center; }
+    .url-text { flex: 1; word-break: break-all; font-size: 0.85rem; color: #444; }
+    .count { font-size: 0.85rem; color: #666; white-space: nowrap; }
+    #summary { margin-top: 16px; font-weight: 600; }
+    .failed { color: #dc2626; }
+    .done { color: #16a34a; }
+    #panel-progress, #panel-done { display: none; }
+    #error-msg { color: #dc2626; margin-top: 8px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<h1>Association Member Scraper</h1>
+
+<!-- INPUT PANEL -->
+<div id="panel-input">
+  <label for="urls">Paste URLs (one per line):</label>
+  <textarea id="urls" rows="8" placeholder="https://www.some-association.org&#10;https://industry-group.com/members"></textarea>
+  <div id="error-msg"></div>
+  <button onclick="startJob()">Start Scraping</button>
+</div>
+
+<!-- PROGRESS PANEL -->
+<div id="panel-progress">
+  <h2>Scraping in progress&hellip;</h2>
+  <div id="url-list"></div>
+  <p id="summary"></p>
+</div>
+
+<!-- DONE PANEL -->
+<div id="panel-done">
+  <h2>Done</h2>
+  <div id="results-list"></div>
+  <div style="margin-top:16px">
+    <button onclick="downloadFile('csv')">Download CSV</button>
+    <button class="secondary" onclick="downloadFile('xlsx')">Download Excel</button>
+    <button class="secondary" onclick="resetUI()">New Job</button>
+  </div>
+</div>
+
+<script>
+  let currentJobId = null;
+  let jobUrls = [];
+  let pollTimer = null;
+
+  function showPanel(name) {
+    ['input', 'progress', 'done'].forEach(p => {
+      document.getElementById(`panel-${p}`).style.display = p === name ? 'block' : 'none';
+    });
+  }
+
+  async function startJob() {
+    const raw = document.getElementById('urls').value;
+    const urls = raw.split('\n').map(u => u.trim()).filter(Boolean);
+    document.getElementById('error-msg').textContent = '';
+
+    if (!urls.length) {
+      document.getElementById('error-msg').textContent = 'Please enter at least one URL.';
+      return;
+    }
+
+    let data;
+    try {
+      const resp = await fetch('/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls }),
+      });
+      data = await resp.json();
+    } catch (e) {
+      document.getElementById('error-msg').textContent = 'Failed to connect to server.';
+      return;
+    }
+
+    currentJobId = data.id;
+    jobUrls = urls;
+
+    renderProgressList(urls);
+    showPanel('progress');
+    pollTimer = setInterval(poll, 2000);
+  }
+
+  function renderProgressList(urls) {
+    const list = document.getElementById('url-list');
+    list.innerHTML = urls.map((url, i) =>
+      `<div class="url-row">
+        <span class="status" id="status-${i}">⟳</span>
+        <span class="url-text">${escHtml(url)}</span>
+        <span class="count" id="count-${i}">…</span>
+      </div>`
+    ).join('');
+    document.getElementById('summary').textContent = '';
+  }
+
+  async function poll() {
+    let data;
+    try {
+      const resp = await fetch(`/jobs/${currentJobId}`);
+      data = await resp.json();
+    } catch (e) {
+      return;
+    }
+
+    jobUrls.forEach((url, i) => {
+      const r = data.url_results[url];
+      if (!r) return;
+      const statusEl = document.getElementById(`status-${i}`);
+      const countEl = document.getElementById(`count-${i}`);
+      if (r.status === 'done') { statusEl.textContent = '✓'; statusEl.className = 'status done'; }
+      else if (r.status === 'failed') { statusEl.textContent = '✗'; statusEl.className = 'status failed'; }
+      else { statusEl.textContent = '⟳'; statusEl.className = 'status'; }
+      countEl.textContent = r.companies_found + ' companies';
+    });
+
+    document.getElementById('summary').textContent =
+      `${data.total_companies} companies found so far`;
+
+    if (data.done) {
+      clearInterval(pollTimer);
+      renderResults(data);
+      showPanel('done');
+    }
+  }
+
+  function renderResults(data) {
+    const list = document.getElementById('results-list');
+    list.innerHTML = jobUrls.map(url => {
+      const r = data.url_results[url];
+      if (!r) return '';
+      if (r.status === 'done') {
+        return `<div class="url-row"><span class="status done">✓</span>
+          <span class="url-text">${escHtml(url)}</span>
+          <span class="count">${r.companies_found} companies</span></div>`;
+      }
+      return `<div class="url-row"><span class="status failed">✗</span>
+        <span class="url-text">${escHtml(url)}</span>
+        <span class="count failed">${escHtml(r.error || 'failed')}</span></div>`;
+    }).join('');
+  }
+
+  function downloadFile(type) {
+    window.location = `/jobs/${currentJobId}/${type}`;
+  }
+
+  function resetUI() {
+    clearInterval(pollTimer);
+    currentJobId = null;
+    jobUrls = [];
+    document.getElementById('urls').value = '';
+    document.getElementById('error-msg').textContent = '';
+    showPanel('input');
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+</script>
+</body>
+</html>
