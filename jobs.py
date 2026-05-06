@@ -28,6 +28,8 @@ class Job:
 
 
 def create_job(urls: list[str]) -> Job:
+    if not urls:
+        raise ValueError("urls must not be empty")
     job_id = str(uuid.uuid4())
     job = Job(id=job_id, urls=urls)
     _jobs[job_id] = job

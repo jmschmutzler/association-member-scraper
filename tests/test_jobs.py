@@ -1,3 +1,4 @@
+import pytest
 from jobs import create_job, get_job
 
 
@@ -33,3 +34,8 @@ def test_get_job_returns_job_by_id():
     job = create_job(["https://example.com"])
     retrieved = get_job(job.id)
     assert retrieved is job
+
+
+def test_create_job_raises_on_empty_urls():
+    with pytest.raises(ValueError, match="urls must not be empty"):
+        create_job([])
