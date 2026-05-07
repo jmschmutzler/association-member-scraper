@@ -1,6 +1,12 @@
 # Association Member Scraper
 
+> **Note:** This tool is still in development. Expect rough edges and incomplete features.
+
 Extracts company listings from association member directories. Exports CSV and Excel.
+
+## Known Issues
+
+- **Borlabs cookie consent dialog blocks "Load more" button** on some sites — fix pending.
 
 ## Setup
 
